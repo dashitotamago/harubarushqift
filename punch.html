@@ -94,10 +94,11 @@ let selectedStaff = null;
 let selectedType = null;
 let stream = null;
 let capturedDataUrl = null;
+let staffList = [];
 
 async function init() {
   try {
-    allData = await apiCall("getAll");
+    staffList = await apiCall("getStaffList");
   } catch (e) {
     document.getElementById("loading").textContent = "読み込みに失敗しました: " + e.message;
     return;
@@ -123,7 +124,7 @@ async function checkGate() {
 function showStaffGrid() {
   const grid = document.getElementById("staffGrid");
   grid.innerHTML = "";
-  allData.staff.forEach((s) => {
+  staffList.forEach((s) => {
     const div = document.createElement("div");
     div.className = "namebtn";
     div.textContent = s.name;
@@ -205,10 +206,9 @@ async function confirmPunch() {
     String(now.getHours()).padStart(2,"0") + ":" + String(now.getMinutes()).padStart(2,"0") + " を記録しました";
   document.getElementById("doneView").classList.remove("hidden");
 
-  setTimeout(async () => {
+  setTimeout(() => {
     document.getElementById("doneView").classList.add("hidden");
     selectedStaff = null; selectedType = null; capturedDataUrl = null;
-    allData = await apiCall("getAll");
     showStaffGrid();
   }, 2800);
 }
