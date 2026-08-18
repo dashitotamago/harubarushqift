@@ -2,9 +2,9 @@
 // ウェブアプリURL(.../exec)を、対応する変数に貼り付けてください。
 // (使わないページの変数は空のままでも構いません)
 
-const PUNCH_API_URL = "ここに打刻用スクリプトのURLを貼り付け";
-const STAFF_API_URL = "ここにスタッフ用スクリプトのURLを貼り付け";
-const ADMIN_API_URL = "ここに管理者用スクリプトのURLを貼り付け";
+const PUNCH_API_URL = "https://script.google.com/macros/s/AKfycbwWtNZ1scHQMIQgQVUxAzI_BVaMF62hW3toqdki37ZmJSZt_f8XcCV6tqiCwjt1je0pyg/exec";
+const STAFF_API_URL = "https://script.google.com/macros/s/AKfycbwG5JJqLn9K2nUBbTnT9XaSo1npvRW7bSB7Zx1y8xVP7YPbPWnW9LGUZ35AD4dz-9aPgg/exec";
+const ADMIN_API_URL = "https://script.google.com/macros/s/AKfycbxfGFp6iWEUpcvZCVQzibOy_dWRx2UEYM9rSGTNpWJkBLq0FjVxl7_uTiJp_9Il7t99/exec";
 
 async function apiCall(url, action, payload) {
   const res = await fetch(url, {
