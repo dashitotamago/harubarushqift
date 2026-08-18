@@ -98,7 +98,7 @@ let staffList = [];
 
 async function init() {
   try {
-    staffList = await apiCall("getStaffList");
+    staffList = await apiCall(PUNCH_API_URL, "getStaffList");
   } catch (e) {
     document.getElementById("loading").textContent = "読み込みに失敗しました: " + e.message;
     return;
@@ -110,7 +110,7 @@ init();
 
 async function checkGate() {
   const code = document.getElementById("passcodeInput").value;
-  const result = await apiCall("checkPunchPasscode", { code });
+  const result = await apiCall(PUNCH_API_URL, "checkPunchPasscode", { code });
   if (!result.ok) {
     document.getElementById("gateError").textContent = "パスコードが違います。";
     document.getElementById("gateError").classList.remove("hidden");
@@ -191,7 +191,7 @@ async function confirmPunch() {
   if (stream) stream.getTracks().forEach((t) => t.stop());
   const now = new Date();
   const date = todayStr();
-  await apiCall("addPunch", {
+  await apiCall(PUNCH_API_URL, "addPunch", {
     staffId: selectedStaff.id,
     date,
     type: selectedType,
