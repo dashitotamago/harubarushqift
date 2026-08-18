@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Shifly - 打刻</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif; background:#f8fafc; color:#0f172a; }
+  .wrap { max-width: 420px; margin:0 auto; padding: 20px; }
+  a.back { font-size:12px; color:#94a3b8; text-decoration:none; }
+  h2 { font-size:16px; text-align:center; margin: 16px 0; }
+  label { display:block; font-size:12px; color:#64748b; margin-bottom:4px; }
+  input { width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:10px; font-size:14px; margin-bottom:12px; }
+  button { background:#0d9488; color:#fff; border:none; border-radius:8px; padding:11px 16px; font-size:14px; font-weight:600; cursor:pointer; width:100%; }
+  button.secondary { background:#fff; color:#334155; border:1px solid #cbd5e1; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .namebtn, .typebtn {
+    background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:22px 10px; text-align:center;
+    font-weight:600; font-size:14px; cursor:pointer;
+  }
+  .typebtn.in { color:#0d9488; } .typebtn.out { color:#64748b; }
+  .typebtn.bs { color:#d97706; } .typebtn.be { color:#0284c7; }
+  .error { color:#e11d48; font-size:12px; margin: -6px 0 10px; }
+  .hidden { display:none; }
+  video, #snapshot { width:100%; border-radius:16px; background:#000; }
+  .camwrap { position:relative; }
+  .capturebtn {
+    width:64px; height:64px; border-radius:50%; background:#fff; border:none; margin: 16px auto 0; display:block;
+    font-size:22px; box-shadow: 0 2px 8px rgba(0,0,0,.2);
+  }
+  #doneView { text-align:center; padding: 60px 0; }
+  #doneView img { width:96px; height:96px; border-radius:16px; object-fit:cover; margin-bottom:12px; }
+  #loading { text-align:center; color:#94a3b8; padding:60px 0; font-size:13px; }
+  .muted { color:#94a3b8; font-size:12px; text-align:center; margin-top:8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="index.html">← 戻る</a>
+  <div id="loading">読み込み中...</div>
+
+  <div id="gateView" class="hidden">
+    <h2>📷 端末パスコード</h2>
+    <p class="muted">打刻は店舗の端末からのみ行えます。</p>
+    <label>パスコード</label>
+    <input id="passcodeInput" inputmode="numeric" />
+    <div id="gateError" class="error hidden"></div>
+    <button onclick="checkGate()">この端末を打刻用にする</button>
+  </div>
+
+  <div id="staffView" class="hidden">
+    <h2>あなたの名前を選んでください</h2>
+    <div class="grid2" id="staffGrid"></div>
+  </div>
+
+  <div id="typeView" class="hidden">
+    <h2 id="typeStaffName"></h2>
+    <div class="grid2">
+      <div class="typebtn in" onclick="selectType('in')">🟢 出勤</div>
+      <div class="typebtn bs" onclick="selectType('breakStart')">☕ 休憩開始</div>
+      <div class="typebtn be" onclick="selectType('breakEnd')">🔄 休憩終了</div>
+      <div class="typebtn out" onclick="selectType('out')">⚪ 退勤</div>
+    </div>
+    <button class="secondary" style="margin-top:14px" onclick="backToStaff()">名前選択に戻る</button>
+  </div>
+
+  <div id="cameraView" class="hidden">
+    <div class="camwrap">
+      <video id="video" autoplay playsinline muted></video>
+      <img id="snapshot" class="hidden" />
+    </div>
+    <button class="capturebtn" id="captureBtn" onclick="capture()">●</button>
+    <div id="afterCapture" class="hidden" style="margin-top:10px;">
+      <div class="grid2">
+        <button class="secondary" onclick="retake()">撮り直す</button>
+        <button onclick="confirmPunch()">この写真で打刻する</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="doneView" class="hidden">
+    <img id="doneImg" />
+    <div style="font-size:14px; color:#94a3b8;" id="doneStaff"></div>
+    <div style="font-size:18px; font-weight:700;" id="doneLabel"></div>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script>
+let allData = null;
+let unlocked = false;
+let selectedStaff = null;
+let selectedType = null;
+let stream = null;
+let capturedDataUrl = null;
+
+async function init() {
+  try {
+    allData = await apiCall("getAll");
+  } catch (e) {
+    document.getElementById("loading").textContent = "読み込みに失敗しました: " + e.message;
+    return;
+  }
+  document.getElementById("loading").classList.add("hidden");
+  document.getElementById("gateView").classList.remove("hidden");
+}
+init();
+
+async function checkGate() {
+  const code = document.getElementById("passcodeInput").value;
+  const result = await apiCall("checkPunchPasscode", { code });
+  if (!result.ok) {
+    document.getElementById("gateError").textContent = "パスコードが違います。";
+    document.getElementById("gateError").classList.remove("hidden");
+    return;
+  }
+  unlocked = true;
+  document.getElementById("gateView").classList.add("hidden");
+  showStaffGrid();
+}
+
+function showStaffGrid() {
+  const grid = document.getElementById("staffGrid");
+  grid.innerHTML = "";
+  allData.staff.forEach((s) => {
+    const div = document.createElement("div");
+    div.className = "namebtn";
+    div.textContent = s.name;
+    div.onclick = () => selectStaff(s);
+    grid.appendChild(div);
+  });
+  document.getElementById("staffView").classList.remove("hidden");
+}
+
+function selectStaff(s) {
+  selectedStaff = s;
+  document.getElementById("staffView").classList.add("hidden");
+  document.getElementById("typeStaffName").textContent = s.name + " さん";
+  document.getElementById("typeView").classList.remove("hidden");
+}
+
+function backToStaff() {
+  document.getElementById("typeView").classList.add("hidden");
+  document.getElementById("staffView").classList.remove("hidden");
+}
+
+async function selectType(type) {
+  selectedType = type;
+  document.getElementById("typeView").classList.add("hidden");
+  document.getElementById("cameraView").classList.remove("hidden");
+  document.getElementById("video").classList.remove("hidden");
+  document.getElementById("snapshot").classList.add("hidden");
+  document.getElementById("captureBtn").classList.remove("hidden");
+  document.getElementById("afterCapture").classList.add("hidden");
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
+    document.getElementById("video").srcObject = stream;
+  } catch (e) {
+    alert("カメラを利用できませんでした。カメラへのアクセスを許可してください。");
+  }
+}
+
+function capture() {
+  const video = document.getElementById("video");
+  const canvas = document.createElement("canvas");
+  const w = 480;
+  const h = Math.round((video.videoHeight / video.videoWidth) * w) || 360;
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  ctx.translate(w, 0); ctx.scale(-1, 1);
+  ctx.drawImage(video, 0, 0, w, h);
+  capturedDataUrl = canvas.toDataURL("image/jpeg", 0.6);
+  document.getElementById("snapshot").src = capturedDataUrl;
+  document.getElementById("snapshot").classList.remove("hidden");
+  document.getElementById("video").classList.add("hidden");
+  document.getElementById("captureBtn").classList.add("hidden");
+  document.getElementById("afterCapture").classList.remove("hidden");
+}
+
+function retake() {
+  capturedDataUrl = null;
+  document.getElementById("snapshot").classList.add("hidden");
+  document.getElementById("video").classList.remove("hidden");
+  document.getElementById("captureBtn").classList.remove("hidden");
+  document.getElementById("afterCapture").classList.add("hidden");
+}
+
+async function confirmPunch() {
+  if (stream) stream.getTracks().forEach((t) => t.stop());
+  const now = new Date();
+  const date = todayStr();
+  await apiCall("addPunch", {
+    staffId: selectedStaff.id,
+    date,
+    type: selectedType,
+    timestamp: now.toISOString(),
+    photoBase64: capturedDataUrl,
+  });
+  document.getElementById("cameraView").classList.add("hidden");
+  document.getElementById("doneImg").src = capturedDataUrl;
+  document.getElementById("doneStaff").textContent = selectedStaff.name + " さん";
+  const labelMap = { in: "出勤", out: "退勤", breakStart: "休憩開始", breakEnd: "休憩終了" };
+  document.getElementById("doneLabel").textContent = labelMap[selectedType] + " " +
+    String(now.getHours()).padStart(2,"0") + ":" + String(now.getMinutes()).padStart(2,"0") + " を記録しました";
+  document.getElementById("doneView").classList.remove("hidden");
+
+  setTimeout(async () => {
+    document.getElementById("doneView").classList.add("hidden");
+    selectedStaff = null; selectedType = null; capturedDataUrl = null;
+    allData = await apiCall("getAll");
+    showStaffGrid();
+  }, 2800);
+}
+</script>
+</body>
+</html>

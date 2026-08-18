@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Shifly - 管理者</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif; background:#f8fafc; color:#0f172a; }
+  .wrap { max-width: 1000px; margin: 0 auto; padding: 20px; }
+  a.back { font-size:12px; color:#94a3b8; text-decoration:none; }
+  h2 { font-size:16px; margin: 0 0 14px; }
+  h3 { font-size:14px; margin: 0 0 10px; }
+  label { display:block; font-size:12px; color:#64748b; margin-bottom:4px; }
+  input, select { border:1px solid #cbd5e1; border-radius:8px; padding:8px 10px; font-size:13px; font-family:inherit; }
+  input:not([type=checkbox]) { width:100%; margin-bottom:10px; }
+  button { background:#0d9488; color:#fff; border:none; border-radius:8px; padding:9px 14px; font-size:13px; font-weight:600; cursor:pointer; }
+  button.secondary { background:#fff; color:#334155; border:1px solid #cbd5e1; }
+  button.danger { background:#fef2f2; color:#e11d48; }
+  button.small { padding:5px 9px; font-size:12px; }
+  .card { background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:16px; margin-bottom:16px; }
+  .row { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+  .top { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+  .logout { font-size:12px; color:#94a3b8; background:none; border:none; cursor:pointer; }
+  .tabs { display:flex; gap:6px; margin-bottom:16px; flex-wrap:wrap; }
+  .tab { padding:7px 12px; border-radius:8px; font-size:13px; cursor:pointer; background:#fff; border:1px solid #e2e8f0; color:#64748b; }
+  .tab.active { background:#0f172a; color:#fff; border-color:#0f172a; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th, td { text-align:left; padding:8px 10px; border-bottom:1px solid #f1f5f9; }
+  th { color:#94a3b8; font-size:11px; text-transform:uppercase; }
+  .hidden { display:none; }
+  .error { color:#e11d48; font-size:12px; margin: -6px 0 10px; }
+  .muted { color:#94a3b8; font-size:12px; }
+  .navrow { display:flex; align-items:center; gap:8px; margin-bottom:14px; }
+  .datebar { display:flex; align-items:center; gap:6px; border:1px solid #e2e8f0; border-radius:8px; padding:6px 10px; background:#fff; }
+  .timecell input { width:78px; margin:0; }
+  #loading { text-align:center; color:#94a3b8; padding:60px 0; font-size:13px; }
+  .badge { font-size:11px; padding:2px 7px; border-radius:99px; }
+  .badge.ok { background:#f0fdfa; color:#0d9488; }
+  .badge.no { background:#f1f5f9; color:#94a3b8; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="index.html">← 戻る</a>
+
+  <div id="loading">読み込み中...</div>
+
+  <div id="loginView" class="hidden" style="max-width:360px; margin:60px auto;">
+    <h2>🛡️ 管理者ログイン</h2>
+    <label>管理者パスワード</label>
+    <input id="adminPw" type="password" />
+    <div class="muted" style="margin-bottom:10px;">初期パスワード: admin123</div>
+    <div id="loginError" class="error hidden"></div>
+    <button onclick="doAdminLogin()">ログイン</button>
+  </div>
+
+  <div id="mainView" class="hidden">
+    <div class="top">
+      <h2 style="margin:0">管理画面</h2>
+      <button class="logout" onclick="logout()">ログアウト</button>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" data-tab="grid" onclick="switchTab('grid')">シフト管理</div>
+      <div class="tab" data-tab="staff" onclick="switchTab('staff')">スタッフ管理</div>
+      <div class="tab" data-tab="payroll" onclick="switchTab('payroll')">給与計算</div>
+      <div class="tab" data-tab="settings" onclick="switchTab('settings')">設定</div>
+    </div>
+
+    <!-- シフト管理 -->
+    <div id="tab-grid">
+      <div class="navrow">
+        <button class="secondary small" onclick="gridChangeDay(-1)">←</button>
+        <div class="datebar">
+          <input id="gridDate" type="date" onchange="renderGrid()" />
+        </div>
+        <button class="secondary small" onclick="gridChangeDay(1)">→</button>
+        <button class="secondary small" onclick="gridToday()">今日</button>
+      </div>
+      <div class="card">
+        <table>
+          <thead>
+            <tr><th>スタッフ</th><th>希望シフト</th><th>確定 開始</th><th>確定 終了</th><th>休憩開始</th><th>休憩終了</th><th></th></tr>
+          </thead>
+          <tbody id="gridBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- スタッフ管理 -->
+    <div id="tab-staff" class="hidden">
+      <div class="card">
+        <h3>スタッフ登録</h3>
+        <label>氏名</label>
+        <input id="newStaffName" placeholder="例) 鈴木 一郎" />
+        <div class="row">
+          <div style="flex:1"><label>時給(円)</label><input id="newStaffWage" type="number" /></div>
+          <div style="flex:1"><label>交通費(円/日)</label><input id="newStaffTransport" type="number" /></div>
+        </div>
+        <button onclick="addStaff()">登録する</button>
+      </div>
+      <div class="card">
+        <table>
+          <thead><tr><th>氏名</th><th>時給</th><th>交通費</th><th>パスワード</th><th></th></tr></thead>
+          <tbody id="staffBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 給与計算 -->
+    <div id="tab-payroll" class="hidden">
+      <div class="navrow">
+        <button class="secondary small" onclick="payrollChangeMonth(-1)">←</button>
+        <div id="payrollMonthLabel" style="font-weight:600; font-size:14px;"></div>
+        <button class="secondary small" onclick="payrollChangeMonth(1)">→</button>
+      </div>
+      <div class="card">
+        <table>
+          <thead><tr><th>スタッフ</th><th>出勤日数</th><th>実働時間</th><th>時給支給額</th><th>交通費</th><th>合計</th></tr></thead>
+          <tbody id="payrollBody"></tbody>
+        </table>
+      </div>
+      <p class="muted">出勤〜退勤の打刻(休憩を除く)をもとに時給×時間で計算しています。時間外・深夜割増や社会保険控除には対応していません。</p>
+    </div>
+
+    <!-- 設定 -->
+    <div id="tab-settings" class="hidden">
+      <div class="card">
+        <h3>管理者パスワード変更</h3>
+        <label>新しいパスワード</label>
+        <input id="newAdminPw" type="password" />
+        <button onclick="changeAdminPw()">変更する</button>
+      </div>
+      <div class="card">
+        <h3>打刻端末パスコード</h3>
+        <p class="muted">店舗のiPadなど、打刻を許可する端末にだけこのパスコードを伝えてください。</p>
+        <label>パスコード</label>
+        <input id="newPasscode" />
+        <button onclick="changePasscode()">変更する</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script>
+let allData = null;
+let gridDateVal = todayStr();
+let payrollYm = (() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() + 1 }; })();
+
+async function init() {
+  try {
+    allData = await apiCall("getAll");
+  } catch (e) {
+    document.getElementById("loading").textContent = "読み込みに失敗しました: " + e.message;
+    return;
+  }
+  document.getElementById("loading").classList.add("hidden");
+  document.getElementById("loginView").classList.remove("hidden");
+}
+init();
+
+async function doAdminLogin() {
+  const pw = document.getElementById("adminPw").value;
+  const result = await apiCall("adminLogin", { password: pw });
+  if (!result.ok) {
+    document.getElementById("loginError").textContent = "パスワードが違います。";
+    document.getElementById("loginError").classList.remove("hidden");
+    return;
+  }
+  document.getElementById("loginView").classList.add("hidden");
+  document.getElementById("mainView").classList.remove("hidden");
+  document.getElementById("gridDate").value = gridDateVal;
+  renderGrid();
+  renderStaff();
+  renderPayroll();
+}
+
+function logout() {
+  document.getElementById("mainView").classList.add("hidden");
+  document.getElementById("loginView").classList.remove("hidden");
+  document.getElementById("adminPw").value = "";
+}
+
+function switchTab(key) {
+  document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t.dataset.tab === key));
+  ["grid", "staff", "payroll", "settings"].forEach((k) => {
+    document.getElementById("tab-" + k).classList.toggle("hidden", k !== key);
+  });
+}
+
+async function refresh() {
+  allData = await apiCall("getAll");
+}
+
+/* ---- シフト管理 ---- */
+function gridChangeDay(n) {
+  gridDateVal = addDays(document.getElementById("gridDate").value || gridDateVal, n);
+  document.getElementById("gridDate").value = gridDateVal;
+  renderGrid();
+}
+function gridToday() {
+  gridDateVal = todayStr();
+  document.getElementById("gridDate").value = gridDateVal;
+  renderGrid();
+}
+
+async function renderGrid() {
+  await refresh();
+  const date = document.getElementById("gridDate").value || gridDateVal;
+  gridDateVal = date;
+  const body = document.getElementById("gridBody");
+  body.innerHTML = "";
+  allData.staff.forEach((s) => {
+    const req = allData.shifts.find((sh) => sh.staffId === s.id && sh.date === date);
+    const asg = allData.assigned.find((a) => a.staffId === s.id && a.date === date);
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${s.name}</td>
+      <td class="muted">${req ? req.start + "〜" + req.end : "(希望なし)"}</td>
+      <td class="timecell"><input type="time" id="s_${s.id}" value="${asg ? asg.start : ""}"></td>
+      <td class="timecell"><input type="time" id="e_${s.id}" value="${asg ? asg.end : ""}"></td>
+      <td class="timecell"><input type="time" id="bs_${s.id}" value="${asg ? (asg.breakStart||"") : ""}"></td>
+      <td class="timecell"><input type="time" id="be_${s.id}" value="${asg ? (asg.breakEnd||"") : ""}"></td>
+      <td><button class="small" onclick="saveAssigned('${s.id}','${date}','${asg ? asg.id : ""}')">保存</button></td>
+    `;
+    body.appendChild(tr);
+  });
+}
+
+async function saveAssigned(staffId, date, existingId) {
+  const start = document.getElementById("s_" + staffId).value;
+  const end = document.getElementById("e_" + staffId).value;
+  const breakStart = document.getElementById("bs_" + staffId).value;
+  const breakEnd = document.getElementById("be_" + staffId).value;
+  if (!start || !end) {
+    if (existingId) { await apiCall("deleteAssigned", { id: existingId }); await renderGrid(); }
+    return;
+  }
+  await apiCall("saveAssigned", { id: existingId || undefined, staffId, date, start, end, breakStart, breakEnd });
+  await renderGrid();
+}
+
+/* ---- スタッフ管理 ---- */
+async function renderStaff() {
+  await refresh();
+  const body = document.getElementById("staffBody");
+  body.innerHTML = "";
+  allData.staff.forEach((s) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${s.name}</td>
+      <td>${yen(s.hourlyWage)}</td>
+      <td>${yen(s.transportFee)}</td>
+      <td><span class="badge ${s.hasPassword ? "ok" : "no"}">${s.hasPassword ? "設定済み" : "未設定"}</span></td>
+      <td>
+        <button class="secondary small" onclick="resetStaffPassword('${s.id}')">PWリセット</button>
+        <button class="danger small" onclick="deleteStaff('${s.id}')">削除</button>
+      </td>
+    `;
+    body.appendChild(tr);
+  });
+}
+
+async function addStaff() {
+  const name = document.getElementById("newStaffName").value.trim();
+  const hourlyWage = Number(document.getElementById("newStaffWage").value) || 0;
+  const transportFee = Number(document.getElementById("newStaffTransport").value) || 0;
+  if (!name) { alert("氏名を入力してください"); return; }
+  await apiCall("addStaff", { name, hourlyWage, transportFee });
+  document.getElementById("newStaffName").value = "";
+  document.getElementById("newStaffWage").value = "";
+  document.getElementById("newStaffTransport").value = "";
+  await renderStaff();
+  await renderGrid();
+}
+
+async function resetStaffPassword(id) {
+  await apiCall("resetStaffPassword", { id });
+  await renderStaff();
+}
+
+async function deleteStaff(id) {
+  if (!confirm("このスタッフを削除しますか?(関連するシフト・打刻も削除されます)")) return;
+  await apiCall("deleteStaff", { id });
+  await renderStaff();
+  await renderGrid();
+}
+
+/* ---- 給与計算 ---- */
+function payrollChangeMonth(n) {
+  const total = payrollYm.y * 12 + (payrollYm.m - 1) + n;
+  payrollYm = { y: Math.floor(total / 12), m: (total % 12) + 1 };
+  renderPayroll();
+}
+
+function computeDailyWorkMinutes(punchesForDay) {
+  const inP = punchesForDay.find((p) => p.type === "in");
+  const outs = punchesForDay.filter((p) => p.type === "out");
+  const outP = outs.length ? outs[outs.length - 1] : null;
+  if (!inP || !outP) return null;
+  let breakMin = 0;
+  let open = null;
+  punchesForDay
+    .slice()
+    .sort((a, b) => a.timestamp.localeCompare(b.timestamp))
+    .forEach((p) => {
+      if (p.type === "breakStart") open = p;
+      if (p.type === "breakEnd" && open) {
+        breakMin += Math.max(0, (new Date(p.timestamp) - new Date(open.timestamp)) / 60000);
+        open = null;
+      }
+    });
+  const total = Math.max(0, (new Date(outP.timestamp) - new Date(inP.timestamp)) / 60000);
+  return Math.max(0, total - breakMin);
+}
+
+async function renderPayroll() {
+  await refresh();
+  document.getElementById("payrollMonthLabel").textContent = payrollYm.y + "年" + payrollYm.m + "月";
+  const y = payrollYm.y, m = payrollYm.m;
+  const last = new Date(y, m, 0).getDate();
+  const dates = Array.from({ length: last }, (_, i) => `${y}-${String(m).padStart(2,"0")}-${String(i+1).padStart(2,"0")}`);
+  const body = document.getElementById("payrollBody");
+  body.innerHTML = "";
+  allData.staff.forEach((s) => {
+    let workedDays = 0, totalMin = 0;
+    dates.forEach((date) => {
+      const dayPunches = allData.punches.filter((p) => p.staffId === s.id && p.date === date);
+      if (!dayPunches.length) return;
+      const min = computeDailyWorkMinutes(dayPunches);
+      if (min !== null) { workedDays++; totalMin += min; }
+    });
+    const hours = totalMin / 60;
+    const wagePay = hours * s.hourlyWage;
+    const transportPay = workedDays * s.transportFee;
+    const total = wagePay + transportPay;
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${s.name}</td><td>${workedDays}日</td><td>${hours.toFixed(1)}時間</td>
+      <td>${yen(wagePay)}</td><td>${yen(transportPay)}</td><td><b>${yen(total)}</b></td>
+    `;
+    body.appendChild(tr);
+  });
+}
+
+/* ---- 設定 ---- */
+async function changeAdminPw() {
+  const pw = document.getElementById("newAdminPw").value;
+  if (pw.length < 4) { alert("4文字以上で設定してください"); return; }
+  await apiCall("setAdminPassword", { password: pw });
+  document.getElementById("newAdminPw").value = "";
+  alert("変更しました");
+}
+async function changePasscode() {
+  const code = document.getElementById("newPasscode").value;
+  if (code.trim().length < 4) { alert("4文字以上で設定してください"); return; }
+  await apiCall("setSetting", { key: "punchPasscode", value: code.trim() });
+  document.getElementById("newPasscode").value = "";
+  alert("変更しました");
+}
+</script>
+</body>
+</html>

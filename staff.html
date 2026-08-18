@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Shifly - スタッフ</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif; background:#f8fafc; color:#0f172a; }
+  .wrap { max-width: 480px; margin: 0 auto; padding: 20px; }
+  a.back { font-size:12px; color:#94a3b8; text-decoration:none; }
+  h2 { font-size:16px; margin: 12px 0 16px; display:flex; align-items:center; gap:8px; }
+  label { display:block; font-size:12px; color:#64748b; margin-bottom:4px; }
+  input, select, textarea {
+    width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:9px 10px; font-size:14px;
+    margin-bottom:12px; font-family: inherit;
+  }
+  button {
+    background:#0d9488; color:#fff; border:none; border-radius:8px; padding:10px 16px;
+    font-size:14px; font-weight:600; cursor:pointer; width:100%;
+  }
+  button.secondary { background:#fff; color:#334155; border:1px solid #cbd5e1; }
+  button.danger { background:#fef2f2; color:#e11d48; }
+  .error { color:#e11d48; font-size:12px; margin: -6px 0 12px; }
+  .hint { background:#f0fdfa; color:#0f766e; font-size:12px; padding:8px 10px; border-radius:8px; margin-bottom:12px; }
+  .card { background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:16px; margin-bottom:14px; }
+  .row { display:flex; justify-content:space-between; align-items:center; }
+  .top { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+  .top .name { font-weight:700; font-size:15px; }
+  .logout { font-size:12px; color:#94a3b8; background:none; border:none; width:auto; cursor:pointer; }
+  .shiftitem { display:flex; justify-content:space-between; align-items:center; background:#f8fafc; border-radius:10px; padding:10px 12px; margin-bottom:8px; }
+  .shiftitem .d { font-size:13px; font-weight:600; }
+  .shiftitem .t { font-size:12px; color:#64748b; }
+  .del { color:#e11d48; background:none; border:none; width:auto; font-size:12px; cursor:pointer; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .hidden { display:none; }
+  #loading { text-align:center; color:#94a3b8; padding:60px 0; font-size:13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="index.html">← 戻る</a>
+
+  <div id="loading">読み込み中...</div>
+
+  <!-- ログイン -->
+  <div id="loginView" class="hidden">
+    <h2>🧑 スタッフログイン</h2>
+
+    <div id="stepId">
+      <label>お名前(ログインID)</label>
+      <input id="nameInput" placeholder="例) 田中 太郎" />
+      <div id="idError" class="error hidden"></div>
+      <button onclick="submitId()">次へ</button>
+    </div>
+
+    <div id="stepSetup" class="hidden">
+      <div class="hint" id="setupHint"></div>
+      <label>新しいパスワード</label>
+      <input id="pw1" type="password" />
+      <label>新しいパスワード(確認)</label>
+      <input id="pw2" type="password" />
+      <div id="setupError" class="error hidden"></div>
+      <button onclick="submitSetup()">設定してログイン</button>
+    </div>
+
+    <div id="stepPassword" class="hidden">
+      <div class="hint" id="pwHint"></div>
+      <label>パスワード</label>
+      <input id="pwInput" type="password" />
+      <div id="pwError" class="error hidden"></div>
+      <button onclick="submitPassword()">ログイン</button>
+    </div>
+  </div>
+
+  <!-- ログイン後 -->
+  <div id="mainView" class="hidden">
+    <div class="top">
+      <div class="name" id="staffNameLabel"></div>
+      <button class="logout" onclick="logout()">ログアウト</button>
+    </div>
+
+    <div class="card">
+      <h2 style="margin-top:0">シフト希望を提出</h2>
+      <label>日付</label>
+      <input id="shiftDate" type="date" />
+      <div class="grid2">
+        <div>
+          <label>開始時刻</label>
+          <input id="shiftStart" type="time" value="10:00" />
+        </div>
+        <div>
+          <label>終了時刻</label>
+          <input id="shiftEnd" type="time" value="18:00" />
+        </div>
+      </div>
+      <label>メモ(任意)</label>
+      <input id="shiftMemo" placeholder="メモがあれば入力" />
+      <button onclick="submitShift()">この内容で提出する</button>
+    </div>
+
+    <div class="card">
+      <h2 style="margin-top:0">提出したシフト希望</h2>
+      <div id="shiftList"></div>
+      <div id="shiftEmpty" class="hidden" style="color:#94a3b8; font-size:13px;">まだ提出したシフトがありません</div>
+    </div>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script>
+let allData = null;
+let loggedInStaff = null;
+
+async function init() {
+  try {
+    allData = await apiCall("getAll");
+  } catch (e) {
+    document.getElementById("loading").textContent = "読み込みに失敗しました: " + e.message;
+    return;
+  }
+  document.getElementById("loading").classList.add("hidden");
+  document.getElementById("loginView").classList.remove("hidden");
+  document.getElementById("shiftDate").value = todayStr();
+}
+init();
+
+let pendingStaff = null;
+
+async function submitId() {
+  const name = document.getElementById("nameInput").value.trim();
+  document.getElementById("idError").classList.add("hidden");
+  if (!name) return;
+  const result = await apiCall("staffLogin", { name, password: "" });
+  if (!result.ok && result.error === "not_found") {
+    document.getElementById("idError").textContent = "その名前のスタッフは見つかりませんでした。";
+    document.getElementById("idError").classList.remove("hidden");
+    return;
+  }
+  pendingStaff = result.staff;
+  document.getElementById("stepId").classList.add("hidden");
+  if (result.needsSetup) {
+    document.getElementById("setupHint").textContent = pendingStaff.name + " さん、初めてのログインですね。パスワードを設定してください。";
+    document.getElementById("stepSetup").classList.remove("hidden");
+  } else {
+    document.getElementById("pwHint").textContent = pendingStaff.name + " さん、パスワードを入力してください。";
+    document.getElementById("stepPassword").classList.remove("hidden");
+  }
+}
+
+async function submitSetup() {
+  const pw1 = document.getElementById("pw1").value;
+  const pw2 = document.getElementById("pw2").value;
+  const err = document.getElementById("setupError");
+  err.classList.add("hidden");
+  if (pw1.length < 4) { err.textContent = "パスワードは4文字以上で設定してください。"; err.classList.remove("hidden"); return; }
+  if (pw1 !== pw2) { err.textContent = "パスワードが一致しません。"; err.classList.remove("hidden"); return; }
+  await apiCall("setStaffPassword", { id: pendingStaff.id, password: pw1 });
+  loggedInStaff = pendingStaff;
+  showMain();
+}
+
+async function submitPassword() {
+  const pw = document.getElementById("pwInput").value;
+  const err = document.getElementById("pwError");
+  err.classList.add("hidden");
+  const result = await apiCall("staffLogin", { name: pendingStaff.name, password: pw });
+  if (!result.ok) { err.textContent = "パスワードが違います。"; err.classList.remove("hidden"); return; }
+  loggedInStaff = result.staff;
+  showMain();
+}
+
+function logout() {
+  loggedInStaff = null;
+  pendingStaff = null;
+  document.getElementById("mainView").classList.add("hidden");
+  document.getElementById("loginView").classList.remove("hidden");
+  document.getElementById("stepId").classList.remove("hidden");
+  document.getElementById("stepSetup").classList.add("hidden");
+  document.getElementById("stepPassword").classList.add("hidden");
+  document.getElementById("nameInput").value = "";
+}
+
+async function showMain() {
+  document.getElementById("loginView").classList.add("hidden");
+  document.getElementById("mainView").classList.remove("hidden");
+  document.getElementById("staffNameLabel").textContent = loggedInStaff.name + " さん";
+  await refreshShifts();
+}
+
+async function refreshShifts() {
+  allData = await apiCall("getAll");
+  const mine = allData.shifts
+    .filter((s) => s.staffId === loggedInStaff.id)
+    .sort((a, b) => a.date.localeCompare(b.date));
+  const list = document.getElementById("shiftList");
+  list.innerHTML = "";
+  document.getElementById("shiftEmpty").classList.toggle("hidden", mine.length > 0);
+  mine.forEach((s) => {
+    const div = document.createElement("div");
+    div.className = "shiftitem";
+    div.innerHTML = `
+      <div>
+        <div class="d">${s.date}</div>
+        <div class="t">${s.start} 〜 ${s.end}${s.memo ? " / " + s.memo : ""}</div>
+      </div>
+      <button class="del" onclick="deleteShift('${s.date}')">削除</button>
+    `;
+    list.appendChild(div);
+  });
+}
+
+async function submitShift() {
+  const date = document.getElementById("shiftDate").value;
+  const start = document.getElementById("shiftStart").value;
+  const end = document.getElementById("shiftEnd").value;
+  const memo = document.getElementById("shiftMemo").value;
+  if (!date || !start || !end) { alert("日付・時刻を入力してください"); return; }
+  if (toMin(start) >= toMin(end)) { alert("終了時刻は開始時刻より後にしてください"); return; }
+  await apiCall("submitShift", { staffId: loggedInStaff.id, date, start, end, memo });
+  document.getElementById("shiftMemo").value = "";
+  await refreshShifts();
+}
+
+async function deleteShift(date) {
+  if (!confirm(date + " の希望シフトを削除しますか?")) return;
+  await apiCall("deleteShift", { staffId: loggedInStaff.id, date });
+  await refreshShifts();
+}
+</script>
+</body>
+</html>
