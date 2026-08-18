@@ -157,13 +157,13 @@ init();
 
 async function doAdminLogin() {
   const pw = document.getElementById("adminPw").value;
-  const result = await apiCall("adminLogin", { password: pw });
+  const result = await apiCall(ADMIN_API_URL, "adminLogin", { password: pw });
   if (!result.ok) {
     document.getElementById("loginError").textContent = "パスワードが違います。";
     document.getElementById("loginError").classList.remove("hidden");
     return;
   }
-  staffList = await apiCall("getStaffList"); // ログイン後に1回だけ取得し、以後は使い回す
+  staffList = await apiCall(ADMIN_API_URL, "getStaffList"); // ログイン後に1回だけ取得し、以後は使い回す
   document.getElementById("loginView").classList.add("hidden");
   document.getElementById("mainView").classList.remove("hidden");
   document.getElementById("gridDate").value = gridDateVal;
@@ -204,7 +204,7 @@ async function renderGrid() {
   gridDateVal = date;
   const body = document.getElementById("gridBody");
   body.innerHTML = `<tr><td colspan="7" class="muted">読み込み中...</td></tr>`;
-  const dayData = await apiCall("getDayData", { date }); // その日の希望・確定シフトだけを取得
+  const dayData = await apiCall(ADMIN_API_URL, "getDayData", { date }); // その日の希望・確定シフトだけを取得
   body.innerHTML = "";
   staffList.forEach((s) => {
     const req = dayData.shifts.find((sh) => sh.staffId === s.id);
@@ -229,16 +229,16 @@ async function saveAssigned(staffId, date, existingId) {
   const breakStart = document.getElementById("bs_" + staffId).value;
   const breakEnd = document.getElementById("be_" + staffId).value;
   if (!start || !end) {
-    if (existingId) { await apiCall("deleteAssigned", { id: existingId }); await renderGrid(); }
+    if (existingId) { await apiCall(ADMIN_API_URL, "deleteAssigned", { id: existingId }); await renderGrid(); }
     return;
   }
-  await apiCall("saveAssigned", { id: existingId || undefined, staffId, date, start, end, breakStart, breakEnd });
+  await apiCall(ADMIN_API_URL, "saveAssigned", { id: existingId || undefined, staffId, date, start, end, breakStart, breakEnd });
   await renderGrid();
 }
 
 /* ---- スタッフ管理(一覧はキャッシュされた軽量エンドポイント) ---- */
 async function renderStaff() {
-  staffList = await apiCall("getStaffList");
+  staffList = await apiCall(ADMIN_API_URL, "getStaffList");
   const body = document.getElementById("staffBody");
   body.innerHTML = "";
   staffList.forEach((s) => {
@@ -262,7 +262,7 @@ async function addStaff() {
   const hourlyWage = Number(document.getElementById("newStaffWage").value) || 0;
   const transportFee = Number(document.getElementById("newStaffTransport").value) || 0;
   if (!name) { alert("氏名を入力してください"); return; }
-  await apiCall("addStaff", { name, hourlyWage, transportFee });
+  await apiCall(ADMIN_API_URL, "addStaff", { name, hourlyWage, transportFee });
   document.getElementById("newStaffName").value = "";
   document.getElementById("newStaffWage").value = "";
   document.getElementById("newStaffTransport").value = "";
@@ -270,13 +270,13 @@ async function addStaff() {
 }
 
 async function resetStaffPassword(id) {
-  await apiCall("resetStaffPassword", { id });
+  await apiCall(ADMIN_API_URL, "resetStaffPassword", { id });
   await renderStaff();
 }
 
 async function deleteStaff(id) {
   if (!confirm("このスタッフを削除しますか?(関連するシフト・打刻も削除されます)")) return;
-  await apiCall("deleteStaff", { id });
+  await apiCall(ADMIN_API_URL, "deleteStaff", { id });
   await renderStaff();
 }
 
@@ -291,7 +291,7 @@ async function renderPayroll() {
   document.getElementById("payrollMonthLabel").textContent = payrollYm.y + "年" + payrollYm.m + "月";
   const body = document.getElementById("payrollBody");
   body.innerHTML = `<tr><td colspan="6" class="muted">集計中...</td></tr>`;
-  const rows = await apiCall("getPayrollSummary", { year: payrollYm.y, month: payrollYm.m });
+  const rows = await apiCall(ADMIN_API_URL, "getPayrollSummary", { year: payrollYm.y, month: payrollYm.m });
   body.innerHTML = "";
   rows.forEach((r) => {
     const tr = document.createElement("tr");
@@ -307,14 +307,14 @@ async function renderPayroll() {
 async function changeAdminPw() {
   const pw = document.getElementById("newAdminPw").value;
   if (pw.length < 4) { alert("4文字以上で設定してください"); return; }
-  await apiCall("setAdminPassword", { password: pw });
+  await apiCall(ADMIN_API_URL, "setAdminPassword", { password: pw });
   document.getElementById("newAdminPw").value = "";
   alert("変更しました");
 }
 async function changePasscode() {
   const code = document.getElementById("newPasscode").value;
   if (code.trim().length < 4) { alert("4文字以上で設定してください"); return; }
-  await apiCall("setSetting", { key: "punchPasscode", value: code.trim() });
+  await apiCall(ADMIN_API_URL, "setSetting", { key: "punchPasscode", value: code.trim() });
   document.getElementById("newPasscode").value = "";
   alert("変更しました");
 }
