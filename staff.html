@@ -112,13 +112,7 @@
 let allData = null;
 let loggedInStaff = null;
 
-async function init() {
-  try {
-    allData = await apiCall("getAll");
-  } catch (e) {
-    document.getElementById("loading").textContent = "読み込みに失敗しました: " + e.message;
-    return;
-  }
+function init() {
   document.getElementById("loading").classList.add("hidden");
   document.getElementById("loginView").classList.remove("hidden");
   document.getElementById("shiftDate").value = todayStr();
@@ -189,9 +183,7 @@ async function showMain() {
 }
 
 async function refreshShifts() {
-  allData = await apiCall("getAll");
-  const mine = allData.shifts
-    .filter((s) => s.staffId === loggedInStaff.id)
+  const mine = (await apiCall("getShiftsForStaff", { staffId: loggedInStaff.id }))
     .sort((a, b) => a.date.localeCompare(b.date));
   const list = document.getElementById("shiftList");
   list.innerHTML = "";
