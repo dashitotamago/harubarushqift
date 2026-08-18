@@ -125,7 +125,7 @@ async function submitId() {
   const name = document.getElementById("nameInput").value.trim();
   document.getElementById("idError").classList.add("hidden");
   if (!name) return;
-  const result = await apiCall("staffLogin", { name, password: "" });
+  const result = await apiCall(STAFF_API_URL, "staffLogin", { name, password: "" });
   if (!result.ok && result.error === "not_found") {
     document.getElementById("idError").textContent = "その名前のスタッフは見つかりませんでした。";
     document.getElementById("idError").classList.remove("hidden");
@@ -149,7 +149,7 @@ async function submitSetup() {
   err.classList.add("hidden");
   if (pw1.length < 4) { err.textContent = "パスワードは4文字以上で設定してください。"; err.classList.remove("hidden"); return; }
   if (pw1 !== pw2) { err.textContent = "パスワードが一致しません。"; err.classList.remove("hidden"); return; }
-  await apiCall("setStaffPassword", { id: pendingStaff.id, password: pw1 });
+  await apiCall(STAFF_API_URL, "setStaffPassword", { id: pendingStaff.id, password: pw1 });
   loggedInStaff = pendingStaff;
   showMain();
 }
@@ -158,7 +158,7 @@ async function submitPassword() {
   const pw = document.getElementById("pwInput").value;
   const err = document.getElementById("pwError");
   err.classList.add("hidden");
-  const result = await apiCall("staffLogin", { name: pendingStaff.name, password: pw });
+  const result = await apiCall(STAFF_API_URL, "staffLogin", { name: pendingStaff.name, password: pw });
   if (!result.ok) { err.textContent = "パスワードが違います。"; err.classList.remove("hidden"); return; }
   loggedInStaff = result.staff;
   showMain();
@@ -183,7 +183,7 @@ async function showMain() {
 }
 
 async function refreshShifts() {
-  const mine = (await apiCall("getShiftsForStaff", { staffId: loggedInStaff.id }))
+  const mine = (await apiCall(STAFF_API_URL, "getShiftsForStaff", { staffId: loggedInStaff.id }))
     .sort((a, b) => a.date.localeCompare(b.date));
   const list = document.getElementById("shiftList");
   list.innerHTML = "";
@@ -209,14 +209,14 @@ async function submitShift() {
   const memo = document.getElementById("shiftMemo").value;
   if (!date || !start || !end) { alert("日付・時刻を入力してください"); return; }
   if (toMin(start) >= toMin(end)) { alert("終了時刻は開始時刻より後にしてください"); return; }
-  await apiCall("submitShift", { staffId: loggedInStaff.id, date, start, end, memo });
+  await apiCall(STAFF_API_URL, "submitShift", { staffId: loggedInStaff.id, date, start, end, memo });
   document.getElementById("shiftMemo").value = "";
   await refreshShifts();
 }
 
 async function deleteShift(date) {
   if (!confirm(date + " の希望シフトを削除しますか?")) return;
-  await apiCall("deleteShift", { staffId: loggedInStaff.id, date });
+  await apiCall(STAFF_API_URL, "deleteShift", { staffId: loggedInStaff.id, date });
   await refreshShifts();
 }
 </script>
