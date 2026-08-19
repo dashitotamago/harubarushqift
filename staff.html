@@ -63,7 +63,7 @@
       <label>お名前(ログインID)</label>
       <input id="nameInput" placeholder="例) 田中 太郎" />
       <div id="idError" class="error hidden"></div>
-      <button onclick="submitId()">次へ</button>
+      <button id="submitIdBtn" onclick="submitId()">次へ</button>
     </div>
 
     <div id="stepSetup" class="hidden">
@@ -133,6 +133,9 @@ async function submitId() {
   const errEl = document.getElementById("idError");
   errEl.classList.add("hidden");
   if (!name) return;
+  const btn = document.getElementById("submitIdBtn");
+  const originalText = btn.textContent;
+  btn.textContent = "確認中..."; btn.disabled = true;
   try {
     const result = await apiCall(STAFF_API_URL, "staffLogin", { name, password: "" });
     if (!result.ok && result.error === "not_found") {
@@ -152,6 +155,8 @@ async function submitId() {
   } catch (e) {
     errEl.textContent = "通信エラー: " + e.message;
     errEl.classList.remove("hidden");
+  } finally {
+    btn.textContent = originalText; btn.disabled = false;
   }
 }
 
