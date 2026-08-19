@@ -6,35 +6,47 @@
 <title>Shifly - スタッフ</title>
 <style>
   * { box-sizing: border-box; }
-  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif; background:#f8fafc; color:#0f172a; }
+  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif; background:#f8fafc; color:#0f172a; padding-bottom:70px; }
   .wrap { max-width: 480px; margin: 0 auto; padding: 20px; }
   a.back { font-size:12px; color:#94a3b8; text-decoration:none; }
   h2 { font-size:16px; margin: 12px 0 16px; display:flex; align-items:center; gap:8px; }
   label { display:block; font-size:12px; color:#64748b; margin-bottom:4px; }
-  input, select, textarea {
-    width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:9px 10px; font-size:14px;
-    margin-bottom:12px; font-family: inherit;
-  }
-  button {
-    background:#0d9488; color:#fff; border:none; border-radius:8px; padding:10px 16px;
-    font-size:14px; font-weight:600; cursor:pointer; width:100%;
-  }
+  input, select { width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:9px 10px; font-size:14px; margin-bottom:12px; font-family:inherit; }
+  button { background:#0d9488; color:#fff; border:none; border-radius:8px; padding:10px 16px; font-size:14px; font-weight:600; cursor:pointer; width:100%; }
   button.secondary { background:#fff; color:#334155; border:1px solid #cbd5e1; }
-  button.danger { background:#fef2f2; color:#e11d48; }
   .error { color:#e11d48; font-size:12px; margin: -6px 0 12px; }
   .hint { background:#f0fdfa; color:#0f766e; font-size:12px; padding:8px 10px; border-radius:8px; margin-bottom:12px; }
-  .card { background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:16px; margin-bottom:14px; }
-  .row { display:flex; justify-content:space-between; align-items:center; }
-  .top { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+  .top { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
   .top .name { font-weight:700; font-size:15px; }
   .logout { font-size:12px; color:#94a3b8; background:none; border:none; width:auto; cursor:pointer; }
-  .shiftitem { display:flex; justify-content:space-between; align-items:center; background:#f8fafc; border-radius:10px; padding:10px 12px; margin-bottom:8px; }
-  .shiftitem .d { font-size:13px; font-weight:600; }
-  .shiftitem .t { font-size:12px; color:#64748b; }
+  .statgrid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:16px; }
+  .statbox { background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:8px 10px; }
+  .statbox .l { font-size:10px; color:#94a3b8; }
+  .statbox .v { font-size:14px; font-weight:700; }
+  .monthnav { display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:10px; }
+  .monthnav button { width:auto; background:none; color:#334155; border:1px solid #cbd5e1; padding:4px 10px; }
+  .monthnav .label { font-weight:600; font-size:14px; }
+  .toolrow { display:flex; justify-content:space-between; margin-bottom:14px; font-size:12px; }
+  .toolrow a { color:#0d9488; cursor:pointer; text-decoration:none; }
+  .toolrow a.danger { color:#94a3b8; }
+  .card { background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:14px; margin-bottom:10px; }
+  .cardtop { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+  .datelabel { font-size:13px; font-weight:700; }
+  .datelabel.sun { color:#e11d48; } .datelabel.sat { color:#0284c7; }
   .del { color:#e11d48; background:none; border:none; width:auto; font-size:12px; cursor:pointer; }
-  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .timerow { display:flex; align-items:center; gap:8px; border:1px solid #e2e8f0; border-radius:8px; padding:6px 8px; margin-bottom:8px; }
+  .timerow input[type=time] { border:none; margin:0; padding:2px; flex:1; }
+  .dayoffbox { display:flex; justify-content:space-between; align-items:center; background:#f1f5f9; border-radius:8px; padding:8px 10px; margin-bottom:8px; font-size:13px; color:#64748b; }
+  .dayoffbox a { color:#0d9488; font-size:12px; cursor:pointer; }
+  .togglelink { font-size:11px; color:#94a3b8; cursor:pointer; margin-bottom:8px; display:inline-block; }
+  .memoinput { background:#f8fafc; font-size:12px; margin-bottom:8px; }
+  .countbar { display:flex; justify-content:space-between; background:#f8fafc; border-radius:8px; padding:6px 10px; font-size:11px; color:#64748b; }
+  .bottombar { position:fixed; bottom:0; left:0; right:0; background:rgba(255,255,255,.97); border-top:1px solid #e2e8f0; padding:10px 20px; display:flex; justify-content:space-between; align-items:center; }
+  .bottombar .days { font-size:12px; color:#64748b; }
+  .bottombar button { width:auto; padding:9px 20px; }
   .hidden { display:none; }
   #loading { text-align:center; color:#94a3b8; padding:60px 0; font-size:13px; }
+  .banner { display:flex; align-items:center; gap:8px; background:#f0fdfa; border:1px solid #99f6e4; color:#0f766e; border-radius:10px; padding:10px 12px; margin-bottom:14px; font-size:12px; }
 </style>
 </head>
 <body>
@@ -80,46 +92,41 @@
       <button class="logout" onclick="logout()">ログアウト</button>
     </div>
 
-    <div class="card">
-      <h2 style="margin-top:0">シフト希望を提出</h2>
-      <label>日付</label>
-      <input id="shiftDate" type="date" />
-      <div class="grid2">
-        <div>
-          <label>開始時刻</label>
-          <input id="shiftStart" type="time" value="10:00" />
-        </div>
-        <div>
-          <label>終了時刻</label>
-          <input id="shiftEnd" type="time" value="18:00" />
-        </div>
-      </div>
-      <label>メモ(任意)</label>
-      <input id="shiftMemo" placeholder="メモがあれば入力" />
-      <button onclick="submitShift()">この内容で提出する</button>
+    <div id="banner" class="banner hidden">✅ シフトの提出が完了しました!</div>
+
+    <div class="monthnav">
+      <button onclick="changeMonth(-1)">←</button>
+      <div class="label" id="monthLabel"></div>
+      <button onclick="changeMonth(1)">→</button>
     </div>
 
-    <div class="card">
-      <h2 style="margin-top:0">提出したシフト希望</h2>
-      <div id="shiftList"></div>
-      <div id="shiftEmpty" class="hidden" style="color:#94a3b8; font-size:13px;">まだ提出したシフトがありません</div>
+    <div class="toolrow">
+      <a onclick="autofill()">✨ 提出履歴から自動入力</a>
+      <a class="danger" onclick="clearAll()">全削除</a>
     </div>
+
+    <div id="cardList"></div>
+  </div>
+
+  <div id="bottombar" class="bottombar hidden">
+    <div class="days">出勤日数: <span id="workDaysCount">0</span>日</div>
+    <button onclick="submitDone()">シフトを提出</button>
   </div>
 </div>
 
 <script src="config.js"></script>
 <script>
-let allData = null;
 let loggedInStaff = null;
+let pendingStaff = null;
+let myShifts = [];       // このスタッフの希望シフト全件
+let monthCounts = {};    // 全スタッフ分の日別集計(休み希望人数・勤務希望人数)
+let ym = (() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() + 1 }; })();
 
 function init() {
   document.getElementById("loading").classList.add("hidden");
   document.getElementById("loginView").classList.remove("hidden");
-  document.getElementById("shiftDate").value = todayStr();
 }
 init();
-
-let pendingStaff = null;
 
 async function submitId() {
   const name = document.getElementById("nameInput").value.trim();
@@ -165,9 +172,9 @@ async function submitPassword() {
 }
 
 function logout() {
-  loggedInStaff = null;
-  pendingStaff = null;
+  loggedInStaff = null; pendingStaff = null;
   document.getElementById("mainView").classList.add("hidden");
+  document.getElementById("bottombar").classList.add("hidden");
   document.getElementById("loginView").classList.remove("hidden");
   document.getElementById("stepId").classList.remove("hidden");
   document.getElementById("stepSetup").classList.add("hidden");
@@ -178,46 +185,142 @@ function logout() {
 async function showMain() {
   document.getElementById("loginView").classList.add("hidden");
   document.getElementById("mainView").classList.remove("hidden");
+  document.getElementById("bottombar").classList.remove("hidden");
   document.getElementById("staffNameLabel").textContent = loggedInStaff.name + " さん";
-  await refreshShifts();
+  await refreshAll();
 }
 
-async function refreshShifts() {
-  const mine = (await apiCall(STAFF_API_URL, "getShiftsForStaff", { staffId: loggedInStaff.id }))
-    .sort((a, b) => a.date.localeCompare(b.date));
-  const list = document.getElementById("shiftList");
+function changeMonth(n) {
+  const total = ym.y * 12 + (ym.m - 1) + n;
+  ym = { y: Math.floor(total / 12), m: (total % 12) + 1 };
+  refreshAll();
+}
+
+function daysInMonth(y, m) { return new Date(y, m, 0).getDate(); }
+function pad2(n) { return String(n).padStart(2, "0"); }
+function dateStr(y, m, day) { return `${y}-${pad2(m)}-${pad2(day)}`; }
+const WEEKDAY_JP = ["日","月","火","水","木","金","土"];
+
+async function refreshAll() {
+  document.getElementById("monthLabel").textContent = `${ym.y}年${ym.m}月`;
+  const [shifts, counts] = await Promise.all([
+    apiCall(STAFF_API_URL, "getShiftsForStaff", { staffId: loggedInStaff.id }),
+    apiCall(STAFF_API_URL, "getMonthShiftCounts", { year: ym.y, month: ym.m }),
+  ]);
+  myShifts = shifts;
+  monthCounts = counts;
+  renderCards();
+}
+
+function renderCards() {
+  const list = document.getElementById("cardList");
   list.innerHTML = "";
-  document.getElementById("shiftEmpty").classList.toggle("hidden", mine.length > 0);
-  mine.forEach((s) => {
-    const div = document.createElement("div");
-    div.className = "shiftitem";
-    div.innerHTML = `
-      <div>
-        <div class="d">${s.date}</div>
-        <div class="t">${s.start} 〜 ${s.end}${s.memo ? " / " + s.memo : ""}</div>
+  const n = daysInMonth(ym.y, ym.m);
+  let workDays = 0;
+
+  for (let day = 1; day <= n; day++) {
+    const date = dateStr(ym.y, ym.m, day);
+    const mine = myShifts.find((s) => s.date === date);
+    const isOff = mine && (mine.isDayOff === true || mine.isDayOff === "TRUE" || mine.isDayOff === "true");
+    const hasWork = mine && mine.start && mine.end && !isOff;
+    if (hasWork) workDays++;
+    const wd = new Date(date + "T00:00:00").getDay();
+    const wdClass = wd === 0 ? "sun" : wd === 6 ? "sat" : "";
+    const cnt = monthCounts[date] || { off: 0, work: 0 };
+
+    const card = document.createElement("div");
+    card.className = "card";
+    card.innerHTML = `
+      <div class="cardtop">
+        <div class="datelabel ${wdClass}">${ym.m}/${day}(${WEEKDAY_JP[wd]})</div>
+        ${mine ? `<button class="del" onclick="deleteDay('${date}')">削除</button>` : ""}
       </div>
-      <button class="del" onclick="deleteShift('${s.date}')">削除</button>
+      ${isOff ? `
+        <div class="dayoffbox">
+          <span>この日は休み希望です</span>
+          <a onclick="toggleDayOff('${date}', false)">取り消す</a>
+        </div>
+      ` : `
+        <div class="timerow">
+          <input type="time" id="start_${date}" value="${hasWork ? mine.start : ""}" onchange="timeChanged('${date}')">
+          <span>〜</span>
+          <input type="time" id="end_${date}" value="${hasWork ? mine.end : ""}" onchange="timeChanged('${date}')">
+        </div>
+        <a class="togglelink" onclick="toggleDayOff('${date}', true)">この日は休み希望にする</a>
+      `}
+      <input class="memoinput" placeholder="メモがあれば入力" id="memo_${date}" value="${mine && mine.memo ? mine.memo : ""}" onchange="memoChanged('${date}')" ${isOff ? "" : ""}>
+      <div class="countbar"><span>休み希望人数: ${cnt.off}人・勤務希望人数: ${cnt.work}人</span><span>›</span></div>
     `;
-    list.appendChild(div);
-  });
+    list.appendChild(card);
+  }
+  document.getElementById("workDaysCount").textContent = workDays;
 }
 
-async function submitShift() {
-  const date = document.getElementById("shiftDate").value;
-  const start = document.getElementById("shiftStart").value;
-  const end = document.getElementById("shiftEnd").value;
-  const memo = document.getElementById("shiftMemo").value;
-  if (!date || !start || !end) { alert("日付・時刻を入力してください"); return; }
+async function timeChanged(date) {
+  const start = document.getElementById("start_" + date).value;
+  const end = document.getElementById("end_" + date).value;
+  if (!start || !end) return;
   if (toMin(start) >= toMin(end)) { alert("終了時刻は開始時刻より後にしてください"); return; }
-  await apiCall(STAFF_API_URL, "submitShift", { staffId: loggedInStaff.id, date, start, end, memo });
-  document.getElementById("shiftMemo").value = "";
-  await refreshShifts();
+  const memoEl = document.getElementById("memo_" + date);
+  await apiCall(STAFF_API_URL, "submitShift", { staffId: loggedInStaff.id, date, start, end, memo: memoEl ? memoEl.value : "" });
+  await refreshAll();
 }
 
-async function deleteShift(date) {
-  if (!confirm(date + " の希望シフトを削除しますか?")) return;
+async function memoChanged(date) {
+  const mine = myShifts.find((s) => s.date === date);
+  if (!mine || !mine.start || !mine.end) return; // 時間未入力の日はメモだけ先に保存しない(まず時間を入れてもらう)
+  const memo = document.getElementById("memo_" + date).value;
+  await apiCall(STAFF_API_URL, "submitShift", { staffId: loggedInStaff.id, date, start: mine.start, end: mine.end, memo });
+}
+
+async function toggleDayOff(date, dayOff) {
+  await apiCall(STAFF_API_URL, "setDayOff", { staffId: loggedInStaff.id, date, dayOff });
+  await refreshAll();
+}
+
+async function deleteDay(date) {
   await apiCall(STAFF_API_URL, "deleteShift", { staffId: loggedInStaff.id, date });
-  await refreshShifts();
+  await refreshAll();
+}
+
+async function clearAll() {
+  if (!confirm(`${ym.y}年${ym.m}月の入力内容をすべて削除します。よろしいですか?`)) return;
+  const n = daysInMonth(ym.y, ym.m);
+  const dates = Array.from({ length: n }, (_, i) => dateStr(ym.y, ym.m, i + 1));
+  await apiCall(STAFF_API_URL, "clearShiftsInRange", { staffId: loggedInStaff.id, dates });
+  await refreshAll();
+}
+
+async function autofill() {
+  const past = myShifts
+    .filter((s) => s.date < todayStr() && s.start && s.end && !(s.isDayOff === true || s.isDayOff === "TRUE"))
+    .sort((a, b) => b.date.localeCompare(a.date));
+  const byWeekday = {};
+  past.forEach((s) => {
+    const wd = new Date(s.date + "T00:00:00").getDay();
+    if (!(wd in byWeekday)) byWeekday[wd] = s;
+  });
+  const n = daysInMonth(ym.y, ym.m);
+  const tasks = [];
+  for (let day = 1; day <= n; day++) {
+    const date = dateStr(ym.y, ym.m, day);
+    const already = myShifts.find((s) => s.date === date);
+    if (already) continue;
+    const wd = new Date(date + "T00:00:00").getDay();
+    const match = byWeekday[wd];
+    if (match) {
+      tasks.push(apiCall(STAFF_API_URL, "submitShift", { staffId: loggedInStaff.id, date, start: match.start, end: match.end, memo: "" }));
+    }
+  }
+  if (tasks.length === 0) { alert("自動入力できる履歴がありませんでした。"); return; }
+  await Promise.all(tasks);
+  await refreshAll();
+}
+
+function submitDone() {
+  const banner = document.getElementById("banner");
+  banner.classList.remove("hidden");
+  setTimeout(() => banner.classList.add("hidden"), 3200);
 }
 </script>
 </body>
