@@ -130,22 +130,28 @@ init();
 
 async function submitId() {
   const name = document.getElementById("nameInput").value.trim();
-  document.getElementById("idError").classList.add("hidden");
+  const errEl = document.getElementById("idError");
+  errEl.classList.add("hidden");
   if (!name) return;
-  const result = await apiCall(STAFF_API_URL, "staffLogin", { name, password: "" });
-  if (!result.ok && result.error === "not_found") {
-    document.getElementById("idError").textContent = "その名前のスタッフは見つかりませんでした。";
-    document.getElementById("idError").classList.remove("hidden");
-    return;
-  }
-  pendingStaff = result.staff;
-  document.getElementById("stepId").classList.add("hidden");
-  if (result.needsSetup) {
-    document.getElementById("setupHint").textContent = pendingStaff.name + " さん、初めてのログインですね。パスワードを設定してください。";
-    document.getElementById("stepSetup").classList.remove("hidden");
-  } else {
-    document.getElementById("pwHint").textContent = pendingStaff.name + " さん、パスワードを入力してください。";
-    document.getElementById("stepPassword").classList.remove("hidden");
+  try {
+    const result = await apiCall(STAFF_API_URL, "staffLogin", { name, password: "" });
+    if (!result.ok && result.error === "not_found") {
+      errEl.textContent = "その名前のスタッフは見つかりませんでした。";
+      errEl.classList.remove("hidden");
+      return;
+    }
+    pendingStaff = result.staff;
+    document.getElementById("stepId").classList.add("hidden");
+    if (result.needsSetup) {
+      document.getElementById("setupHint").textContent = pendingStaff.name + " さん、初めてのログインですね。パスワードを設定してください。";
+      document.getElementById("stepSetup").classList.remove("hidden");
+    } else {
+      document.getElementById("pwHint").textContent = pendingStaff.name + " さん、パスワードを入力してください。";
+      document.getElementById("stepPassword").classList.remove("hidden");
+    }
+  } catch (e) {
+    errEl.textContent = "通信エラー: " + e.message;
+    errEl.classList.remove("hidden");
   }
 }
 
@@ -156,19 +162,29 @@ async function submitSetup() {
   err.classList.add("hidden");
   if (pw1.length < 4) { err.textContent = "パスワードは4文字以上で設定してください。"; err.classList.remove("hidden"); return; }
   if (pw1 !== pw2) { err.textContent = "パスワードが一致しません。"; err.classList.remove("hidden"); return; }
-  await apiCall(STAFF_API_URL, "setStaffPassword", { id: pendingStaff.id, password: pw1 });
-  loggedInStaff = pendingStaff;
-  showMain();
+  try {
+    await apiCall(STAFF_API_URL, "setStaffPassword", { id: pendingStaff.id, password: pw1 });
+    loggedInStaff = pendingStaff;
+    await showMain();
+  } catch (e) {
+    err.textContent = "通信エラー: " + e.message;
+    err.classList.remove("hidden");
+  }
 }
 
 async function submitPassword() {
   const pw = document.getElementById("pwInput").value;
   const err = document.getElementById("pwError");
   err.classList.add("hidden");
-  const result = await apiCall(STAFF_API_URL, "staffLogin", { name: pendingStaff.name, password: pw });
-  if (!result.ok) { err.textContent = "パスワードが違います。"; err.classList.remove("hidden"); return; }
-  loggedInStaff = result.staff;
-  showMain();
+  try {
+    const result = await apiCall(STAFF_API_URL, "staffLogin", { name: pendingStaff.name, password: pw });
+    if (!result.ok) { err.textContent = "パスワードが違います。"; err.classList.remove("hidden"); return; }
+    loggedInStaff = result.staff;
+    await showMain();
+  } catch (e) {
+    err.textContent = "通信エラー: " + e.message;
+    err.classList.remove("hidden");
+  }
 }
 
 function logout() {
@@ -203,13 +219,17 @@ const WEEKDAY_JP = ["日","月","火","水","木","金","土"];
 
 async function refreshAll() {
   document.getElementById("monthLabel").textContent = `${ym.y}年${ym.m}月`;
-  const [shifts, counts] = await Promise.all([
-    apiCall(STAFF_API_URL, "getShiftsForStaff", { staffId: loggedInStaff.id }),
-    apiCall(STAFF_API_URL, "getMonthShiftCounts", { year: ym.y, month: ym.m }),
-  ]);
-  myShifts = shifts;
-  monthCounts = counts;
-  renderCards();
+  const list = document.getElementById("cardList");
+  list.innerHTML = `<p style="text-align:center; color:#94a3b8; font-size:13px;">読み込み中...</p>`;
+  try {
+    // 1回のAPI呼び出しで、自分のシフト履歴と月間集計を両方まとめて取得(通信回数を減らして軽量化)
+    const data = await apiCall(STAFF_API_URL, "getStaffPageData", { staffId: loggedInStaff.id, year: ym.y, month: ym.m });
+    myShifts = data.myShifts;
+    monthCounts = data.monthCounts;
+    renderCards();
+  } catch (e) {
+    list.innerHTML = `<p style="text-align:center; color:#e11d48; font-size:13px;">読み込みに失敗しました: ${e.message}</p>`;
+  }
 }
 
 function renderCards() {
