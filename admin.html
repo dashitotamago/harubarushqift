@@ -33,11 +33,41 @@
   .muted { color:#94a3b8; font-size:12px; }
   .navrow { display:flex; align-items:center; gap:8px; margin-bottom:14px; }
   .datebar { display:flex; align-items:center; gap:6px; border:1px solid #e2e8f0; border-radius:8px; padding:6px 10px; background:#fff; }
-  .timecell input { width:78px; margin:0; }
   #loading { text-align:center; color:#94a3b8; padding:60px 0; font-size:13px; }
   .badge { font-size:11px; padding:2px 7px; border-radius:99px; }
   .badge.ok { background:#f0fdfa; color:#0d9488; }
   .badge.no { background:#f1f5f9; color:#94a3b8; }
+
+  /* 横棒シフトグリッド */
+  .gridwrap { overflow-x:auto; }
+  .gridinner { min-width:900px; }
+  .ghead { display:flex; border-bottom:1px solid #f1f5f9; }
+  .gnamecol { width:150px; flex-shrink:0; padding:8px 10px; font-size:11px; color:#94a3b8; font-weight:600; }
+  .ghours { display:flex; flex:1; }
+  .ghour { flex:1; text-align:center; font-size:10px; color:#94a3b8; padding:6px 0; border-left:1px solid #f8fafc; }
+  .growrap { display:flex; border-bottom:1px solid #f8fafc; }
+  .gname { width:150px; flex-shrink:0; padding:10px; }
+  .gname .n { font-size:12px; font-weight:700; color:#334155; }
+  .gname .w { font-size:10px; color:#94a3b8; }
+  .gtrack { position:relative; flex:1; padding:8px 0; cursor:pointer; }
+  .glines { position:absolute; inset:0; display:flex; pointer-events:none; }
+  .gline { flex:1; border-left:1px solid #f8fafc; }
+  .greq { position:relative; height:6px; margin-bottom:3px; }
+  .greqbar { position:absolute; top:0; height:6px; background:#cbd5e1; border-radius:3px; }
+  .gasn { position:relative; height:26px; }
+  .gasnbar {
+    position:absolute; top:0; height:26px; background:#99f6e4; border:1px solid #14b8a6; border-radius:6px;
+    font-size:10px; color:#0f766e; line-height:24px; padding:0 6px; overflow:hidden; white-space:nowrap; cursor:pointer;
+  }
+  .gasnbar:hover { background:#5eead4; }
+  .glegend { display:flex; gap:14px; font-size:11px; color:#94a3b8; margin-top:8px; flex-wrap:wrap; align-items:center; }
+  .glegend .sw { display:inline-block; width:16px; height:8px; border-radius:3px; vertical-align:middle; margin-right:4px; }
+
+  /* シフト編集モーダル */
+  .modal-overlay { position:fixed; inset:0; background:rgba(15,23,42,.4); display:flex; align-items:center; justify-content:center; z-index:50; padding:16px; }
+  .modal-box { background:#fff; border-radius:14px; padding:18px; width:100%; max-width:340px; }
+  .modal-box h3 { margin-top:0; }
+  .modal-actions { display:flex; justify-content:space-between; align-items:center; margin-top:10px; }
 </style>
 </head>
 <body>
@@ -79,13 +109,47 @@
         <button class="secondary small" onclick="gridChangeDay(1)">→</button>
         <button class="secondary small" onclick="gridToday()">今日</button>
       </div>
-      <div class="card">
-        <table>
-          <thead>
-            <tr><th>スタッフ</th><th>希望シフト</th><th>確定 開始</th><th>確定 終了</th><th>休憩開始</th><th>休憩終了</th><th></th></tr>
-          </thead>
-          <tbody id="gridBody"></tbody>
-        </table>
+      <div class="card gridwrap">
+        <div class="gridinner">
+          <div class="ghead">
+            <div class="gnamecol">スタッフ</div>
+            <div class="ghours" id="ghours"></div>
+          </div>
+          <div id="gridRows"></div>
+        </div>
+      </div>
+      <div class="glegend">
+        <span><span class="sw" style="background:#cbd5e1"></span>希望シフト</span>
+        <span><span class="sw" style="background:#99f6e4; border:1px solid #14b8a6"></span>確定シフト</span>
+        <span>帯の空いている場所をクリックで確定シフト追加、緑の帯をクリックで編集・削除</span>
+      </div>
+    </div>
+
+    <!-- シフト編集モーダル -->
+    <div id="shiftModal" class="modal-overlay hidden">
+      <div class="modal-box">
+        <h3 id="shiftModalTitle">確定シフト</h3>
+        <label>開始時刻</label>
+        <input type="time" id="modalStart" />
+        <label>終了時刻</label>
+        <input type="time" id="modalEnd" />
+        <label style="display:flex; align-items:center; gap:6px;">
+          <input type="checkbox" id="modalHasBreak" style="width:auto; margin:0;" onchange="toggleModalBreak()" /> 休憩時間を設定する
+        </label>
+        <div id="modalBreakRow" class="hidden">
+          <div class="row">
+            <div style="flex:1"><label>休憩開始</label><input type="time" id="modalBreakStart" /></div>
+            <div style="flex:1"><label>休憩終了</label><input type="time" id="modalBreakEnd" /></div>
+          </div>
+        </div>
+        <div id="modalError" class="error hidden"></div>
+        <div class="modal-actions">
+          <button class="danger small" id="modalDeleteBtn" onclick="deleteFromModal()">削除</button>
+          <div>
+            <button class="secondary small" onclick="closeModal()">閉じる</button>
+            <button class="small" onclick="saveFromModal()">保存</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -228,7 +292,12 @@ function switchTab(key) {
   if (key === "evaluation") renderEvaluation();
 }
 
-/* ---- シフト管理(その日の分だけ取得) ---- */
+/* ---- シフト管理(横棒グリッド表示) ---- */
+const GRID_START_HOUR = 9;
+const GRID_END_HOUR = 24;
+const GRID_HOURS = Array.from({ length: GRID_END_HOUR - GRID_START_HOUR }, (_, i) => GRID_START_HOUR + i);
+const GRID_RANGE_MIN = (GRID_END_HOUR - GRID_START_HOUR) * 60;
+
 function gridChangeDay(n) {
   gridDateVal = addDays(document.getElementById("gridDate").value || gridDateVal, n);
   document.getElementById("gridDate").value = gridDateVal;
@@ -240,40 +309,132 @@ function gridToday() {
   renderGrid();
 }
 
+function gridClampMin(min) {
+  return Math.max(GRID_START_HOUR * 60, Math.min(GRID_END_HOUR * 60, min));
+}
+function gridPos(start, end) {
+  const left = ((gridClampMin(toMin(start)) - GRID_START_HOUR * 60) / GRID_RANGE_MIN) * 100;
+  const width = ((gridClampMin(toMin(end)) - gridClampMin(toMin(start))) / GRID_RANGE_MIN) * 100;
+  return { left, width };
+}
+
+let currentDayData = { shifts: [], assigned: [] };
+
 async function renderGrid() {
   const date = document.getElementById("gridDate").value || gridDateVal;
   gridDateVal = date;
-  const body = document.getElementById("gridBody");
-  body.innerHTML = `<tr><td colspan="7" class="muted">読み込み中...</td></tr>`;
-  const dayData = await apiCall(ADMIN_API_URL, "getDayData", { date }); // その日の希望・確定シフトだけを取得
-  body.innerHTML = "";
+
+  // 時間ヘッダー
+  const ghours = document.getElementById("ghours");
+  ghours.innerHTML = GRID_HOURS.map((h) => `<div class="ghour">${h}時</div>`).join("");
+
+  const rows = document.getElementById("gridRows");
+  rows.innerHTML = `<div class="muted" style="padding:16px;">読み込み中...</div>`;
+  currentDayData = await apiCall(ADMIN_API_URL, "getDayData", { date }); // その日の希望・確定シフトだけを取得
+  rows.innerHTML = "";
+
   staffList.forEach((s) => {
-    const req = dayData.shifts.find((sh) => sh.staffId === s.id);
-    const asg = dayData.assigned.find((a) => a.staffId === s.id);
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${s.name}</td>
-      <td class="muted">${req ? (req.isDayOff ? "(休み希望)" : req.start + "〜" + req.end) : "(希望なし)"}</td>
-      <td class="timecell"><input type="time" id="s_${s.id}" value="${asg ? asg.start : ""}"></td>
-      <td class="timecell"><input type="time" id="e_${s.id}" value="${asg ? asg.end : ""}"></td>
-      <td class="timecell"><input type="time" id="bs_${s.id}" value="${asg ? (asg.breakStart||"") : ""}"></td>
-      <td class="timecell"><input type="time" id="be_${s.id}" value="${asg ? (asg.breakEnd||"") : ""}"></td>
-      <td><button class="small" onclick="saveAssigned('${s.id}','${date}','${asg ? asg.id : ""}')">保存</button></td>
+    const req = currentDayData.shifts.find((sh) => sh.staffId === s.id);
+    const asg = currentDayData.assigned.find((a) => a.staffId === s.id);
+
+    const row = document.createElement("div");
+    row.className = "growrap";
+
+    const reqBarHtml = (req && !req.isDayOff && req.start && req.end) ? (() => {
+      const p = gridPos(req.start, req.end);
+      return `<div class="greqbar" style="left:${p.left}%; width:${p.width}%" title="希望シフト ${req.start}〜${req.end}"></div>`;
+    })() : "";
+
+    const asnBarHtml = asg ? (() => {
+      const p = gridPos(asg.start, asg.end);
+      return `<div class="gasnbar" style="left:${p.left}%; width:${p.width}%" data-assigned-id="${asg.id}" onclick="event.stopPropagation(); openShiftModalById('${s.id}','${s.name.replace(/'/g, "\\'")}','${date}','${asg.id}')">${asg.start}-${asg.end}</div>`;
+    })() : "";
+
+    row.innerHTML = `
+      <div class="gname"><div class="n">${s.name}</div><div class="w">${req ? (req.isDayOff ? "休み希望" : "希望あり") : "希望なし"}</div></div>
+      <div class="gtrack" onclick="trackClicked(event, '${s.id}', '${s.name.replace(/'/g, "\\'")}', '${date}')">
+        <div class="glines">${GRID_HOURS.map(() => '<div class="gline"></div>').join("")}</div>
+        <div class="greq">${reqBarHtml}</div>
+        <div class="gasn">${asnBarHtml}</div>
+      </div>
     `;
-    body.appendChild(tr);
+    rows.appendChild(row);
   });
+
+  if (staffList.length === 0) {
+    rows.innerHTML = `<div class="muted" style="padding:16px;">「スタッフ管理」からスタッフを登録してください</div>`;
+  }
 }
 
-async function saveAssigned(staffId, date, existingId) {
-  const start = document.getElementById("s_" + staffId).value;
-  const end = document.getElementById("e_" + staffId).value;
-  const breakStart = document.getElementById("bs_" + staffId).value;
-  const breakEnd = document.getElementById("be_" + staffId).value;
-  if (!start || !end) {
-    if (existingId) { await apiCall(ADMIN_API_URL, "deleteAssigned", { id: existingId }); await renderGrid(); }
+// 帯の空いている場所をクリックしたときだけ「新規追加」を開く(既存の帯自体のクリックは gasnbar 側の stopPropagation で処理)
+function trackClicked(e, staffId, staffName, date) {
+  openShiftModal(staffId, staffName, date, null);
+}
+
+function openShiftModalById(staffId, staffName, date, assignedId) {
+  const asg = currentDayData.assigned.find((a) => String(a.id) === String(assignedId));
+  openShiftModal(staffId, staffName, date, asg || null);
+}
+
+let modalCtx = null; // { staffId, staffName, date, assignedId }
+
+function openShiftModal(staffId, staffName, date, assigned) {
+  modalCtx = { staffId, staffName, date, assignedId: assigned ? assigned.id : null };
+  document.getElementById("shiftModalTitle").textContent = staffName + "のシフト(確定)";
+  document.getElementById("modalStart").value = assigned ? assigned.start : "10:00";
+  document.getElementById("modalEnd").value = assigned ? assigned.end : "18:00";
+  const hasBreak = !!(assigned && assigned.breakStart && assigned.breakEnd);
+  document.getElementById("modalHasBreak").checked = hasBreak;
+  document.getElementById("modalBreakStart").value = assigned && assigned.breakStart ? assigned.breakStart : "";
+  document.getElementById("modalBreakEnd").value = assigned && assigned.breakEnd ? assigned.breakEnd : "";
+  document.getElementById("modalBreakRow").classList.toggle("hidden", !hasBreak);
+  document.getElementById("modalDeleteBtn").classList.toggle("hidden", !assigned);
+  document.getElementById("modalError").classList.add("hidden");
+  document.getElementById("shiftModal").classList.remove("hidden");
+}
+
+function closeModal() {
+  document.getElementById("shiftModal").classList.add("hidden");
+  modalCtx = null;
+}
+
+function toggleModalBreak() {
+  document.getElementById("modalBreakRow").classList.toggle("hidden", !document.getElementById("modalHasBreak").checked);
+}
+
+async function saveFromModal() {
+  const start = document.getElementById("modalStart").value;
+  const end = document.getElementById("modalEnd").value;
+  const hasBreak = document.getElementById("modalHasBreak").checked;
+  const breakStart = hasBreak ? document.getElementById("modalBreakStart").value : "";
+  const breakEnd = hasBreak ? document.getElementById("modalBreakEnd").value : "";
+  const err = document.getElementById("modalError");
+  err.classList.add("hidden");
+  if (!start || !end || toMin(start) >= toMin(end)) {
+    err.textContent = "終了時刻は開始時刻より後にしてください。";
+    err.classList.remove("hidden");
     return;
   }
-  await apiCall(ADMIN_API_URL, "saveAssigned", { id: existingId || undefined, staffId, date, start, end, breakStart, breakEnd });
+  if (hasBreak && (!breakStart || !breakEnd || toMin(breakStart) >= toMin(breakEnd))) {
+    err.textContent = "休憩時間を正しく入力してください。";
+    err.classList.remove("hidden");
+    return;
+  }
+  await apiCall(ADMIN_API_URL, "saveAssigned", {
+    id: modalCtx.assignedId || undefined,
+    staffId: modalCtx.staffId,
+    date: modalCtx.date,
+    start, end, breakStart, breakEnd,
+  });
+  closeModal();
+  await renderGrid();
+}
+
+async function deleteFromModal() {
+  if (modalCtx.assignedId) {
+    await apiCall(ADMIN_API_URL, "deleteAssigned", { id: modalCtx.assignedId });
+  }
+  closeModal();
   await renderGrid();
 }
 
